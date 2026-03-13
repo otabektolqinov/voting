@@ -239,7 +239,7 @@ public class NotificationService {
 
 
     public long getUnreadCount(UUID userId) {
-        return notificationRepository.countUnreadByUserId(userId);
+        return 0/*notificationRepository.countUnreadByUserId(userId)*/;
     }
 
 

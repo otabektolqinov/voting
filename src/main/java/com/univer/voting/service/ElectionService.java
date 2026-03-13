@@ -1,23 +1,26 @@
 package com.univer.voting.service;
 
+import com.univer.voting.dto.request.CandidateRequest;
+import com.univer.voting.dto.request.CreateElectionRequest;
+import com.univer.voting.dto.request.UpdateElectionRequest;
+import com.univer.voting.dto.response.ElectionDTO;
+import com.univer.voting.dto.response.ElectionResultDTO;
 import com.univer.voting.enums.ElectionStatus;
+import com.univer.voting.enums.ElectionType;
 import com.univer.voting.exception.BadRequestException;
 import com.univer.voting.exception.ResourceNotFoundException;
 import com.univer.voting.models.Candidate;
 import com.univer.voting.models.Election;
 import com.univer.voting.models.ElectionVoter;
-import com.univer.voting.repository.CandidateRepository;
-import com.univer.voting.repository.ElectionRepository;
-import com.univer.voting.repository.ElectionVoterRepository;
-import com.univer.voting.repository.VoteRepository;
+import com.univer.voting.repository.*;
+import com.univer.voting.service.mapper.ElectionMapper;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Election Service
@@ -36,39 +39,66 @@ public class ElectionService {
     private final VoteRepository voteRepository;
     private final AuditService auditService;
     private final NotificationService notificationService;
+    private final UserRepository userRepository;
+    private final ElectionMapper electionMapper;
 
     /**
      * Create new election (DRAFT status)
      */
     @Transactional
-    public Election createElection(String title, String description,
-                                   LocalDateTime startDate, LocalDateTime endDate,
+    public Election createElection(CreateElectionRequest request,
                                    UUID createdBy) {
 
-        // Validate dates
-        if (endDate.isBefore(startDate)) {
+        Election election = new Election();
+
+        if (request.getEndDate().isBefore(request.getStartDate())) {
             throw new BadRequestException("End date must be after start date");
         }
 
-        if (startDate.isBefore(LocalDateTime.now())) {
+        if (request.getStartDate().isBefore(LocalDateTime.now())) {
             throw new BadRequestException("Start date must be in the future");
         }
 
-        Election election = Election.builder()
-                .title(title)
-                .description(description)
-                .startDate(startDate)
-                .endDate(endDate)
-                .createdBy(createdBy)
-                .status(ElectionStatus.DRAFT)
-                .build();
+        if (request.getIsPublic() || request.getVoterIds().isEmpty()) {
+            election.setType(ElectionType.PUBLIC);
+        } else {
+            election.setType(ElectionType.RESTRICTED);
+            for (String voterId : request.getVoterIds()) {
+                ElectionVoter ev = new ElectionVoter();
+                ev.setElection(election);
+                ev.setUser(userRepository.findById(UUID.fromString(voterId)).orElseThrow());
+                ev.setAddedBy(createdBy);
+                electionVoterRepository.save(ev);
+            }
+        }
+
+        election.setTitle(request.getTitle());
+        election.setDescription(request.getDescription());
+        election.setStartDate(request.getStartDate());
+        election.setEndDate(request.getEndDate());
+        election.setCreatedBy(createdBy);
+        election.setStatus(ElectionStatus.DRAFT);
 
         Election saved = electionRepository.save(election);
 
-        // Log action
+        List<Candidate> savedCandidates = new ArrayList<>();
+        for (CandidateRequest candidateReq : request.getCandidates()) {
+            Candidate candidate = new Candidate();
+            candidate.setElection(saved);
+            candidate.setName(candidateReq.getName());
+            candidate.setPartyAffiliation(candidateReq.getPartyAffiliation());
+            candidate.setBio(candidateReq.getBio());
+            candidate.setPhotoUrl(candidateReq.getPhotoUrl());
+
+            Candidate candidate1 = candidateRepository.save(candidate);
+            savedCandidates.add(candidate1);
+            log.debug("Created candidate: {} for election: {}", candidate1.getName(), election.getId());
+        }
+
         auditService.logElectionCreated(createdBy, saved.getId());
 
-        log.info("Election created: {} by user {}", saved.getTitle(), createdBy);
+        log.info("Successfully created election '{}' with {} candidates and {} eligible voters",
+                election.getTitle(), savedCandidates.size(), request.getVoterIds().size());
 
         return saved;
     }
@@ -92,7 +122,7 @@ public class ElectionService {
      * Get active elections
      */
     public List<Election> getActiveElections() {
-        return electionRepository.findActiveElections(LocalDateTime.now());
+        return electionRepository.findAllPublicElection();
     }
 
     /**
@@ -112,32 +142,56 @@ public class ElectionService {
     /**
      * Get elections user can vote in
      */
-    public List<Election> getElectionsForUser(UUID userId) {
-        List<Election> activeElections = getActiveElections();
+    public List<ElectionDTO> getElectionsForUser(UUID userId) {
+        /*List<Election> activeElections = getActiveElections();
 
         return activeElections.stream()
-                .filter(election -> canUserVoteInElection(userId, election.getId()))
-                .toList();
+                *//*.filter(election -> canUserVoteInElection(userId, election.getId()))*//*
+                .toList();*/
+        log.info("Getting elections for voter: {}", userId);
+
+        // STEP 1: Get all elections this voter can see
+        List<Election> elections = electionRepository.findElectionsForVoter(userId);
+
+        log.info("Found {} elections for voter", elections.size());
+
+        // STEP 2: Convert to DTOs and add hasVoted flag
+        List<ElectionDTO> electionDTOs = new ArrayList<>();
+
+        for (Election election : elections) {
+            // Check if voter has voted in this election
+            boolean hasVoted = voteRepository.existsByElectionIdAndUserId(
+                    election.getId(),
+                    userId
+            );
+
+            // Convert to DTO
+            ElectionDTO dto = electionMapper.toDTO(election);
+
+            // Add hasVoted flag
+            dto.setHasVoted(hasVoted);
+
+            electionDTOs.add(dto);
+        }
+
+        log.info("Returning {} elections with hasVoted flags", electionDTOs.size());
+
+        return electionDTOs;
     }
 
-    /**
-     * Update election details (only if DRAFT)
-     */
     @Transactional
-    public Election updateElection(UUID electionId, String title, String description,
-                                   LocalDateTime startDate, LocalDateTime endDate) {
+    public Election updateElection(UUID electionId, UpdateElectionRequest request) {
 
         Election election = getElectionById(electionId);
 
-        // Can only update DRAFT elections
         if (election.getStatus() != ElectionStatus.DRAFT) {
             throw new BadRequestException("Can only update elections in DRAFT status");
         }
 
-        if (title != null) election.setTitle(title);
-        if (description != null) election.setDescription(description);
-        if (startDate != null) election.setStartDate(startDate);
-        if (endDate != null) election.setEndDate(endDate);
+        if (request.getTitle() != null) election.setTitle(request.getTitle());
+        if (request.getDescription() != null) election.setDescription(request.getDescription());
+        if (request.getStartDate() != null) election.setStartDate(request.getStartDate());
+        if (request.getEndDate() != null) election.setEndDate(request.getEndDate());
 
         return electionRepository.save(election);
     }
@@ -297,22 +351,78 @@ public class ElectionService {
     /**
      * Get election results (vote counts per candidate)
      */
-    public List<Object[]> getElectionResults(UUID electionId) {
+    public List<ElectionResultDTO> getElectionResults(UUID electionId) {
+        log.info("Getting results for election: {}", electionId);
+
+        // STEP 1: Get the election
         Election election = getElectionById(electionId);
 
-        // Only show results if published or to admins
-        if (!election.getResultsPublished()) {
-            throw new BadRequestException("Results not yet published");
+        // STEP 2: Validate - can we show results?
+        // Option A: Only if election is CLOSED
+        // Option B: Allow viewing anytime (for testing)
+        // Let's use Option B for now (you can change this later)
+
+        if (election.getStatus() == ElectionStatus.DRAFT) {
+            throw new BadRequestException("Cannot view results - election hasn't started yet");
         }
 
-        // TODO: Return proper result DTO
-        // For now, return candidate vote counts
-        return List.of();
+        // STEP 3: Get vote counts from database
+        // This returns: [[candidateId, voteCount], [candidateId, voteCount], ...]
+        List<Object[]> voteCounts = voteRepository.countVotesByCandidate(electionId);
+
+        // Convert to a Map for easy lookup: candidateId -> voteCount
+        Map<UUID, Long> voteCountMap = new HashMap<>();
+        for (Object[] row : voteCounts) {
+            UUID candidateId = (UUID) row[0];
+            Long count = (Long) row[1];
+            voteCountMap.put(candidateId, count);
+        }
+
+        // STEP 4: Calculate total votes
+        Long totalVotes = voteCountMap.values().stream()
+                .mapToLong(Long::longValue)
+                .sum();
+
+        log.info("Total votes for election {}: {}", electionId, totalVotes);
+
+        // STEP 5: Build result DTOs for each candidate
+        List<ElectionResultDTO> results = new ArrayList<>();
+
+        for (Candidate candidate : election.getCandidates()) {
+            Long candidateVotes = voteCountMap.getOrDefault(candidate.getId(), 0L);
+
+            // Calculate percentage
+            Double percentage = 0.0;
+            if (totalVotes > 0) {
+                percentage = (candidateVotes * 100.0) / totalVotes;
+            }
+
+            // Build the DTO
+            ElectionResultDTO resultDTO = ElectionResultDTO.builder()
+                    .candidateId(candidate.getId().toString())
+                    .candidateName(candidate.getName())
+                    .partyAffiliation(candidate.getPartyAffiliation())
+                    .voteCount(candidateVotes)
+                    .percentage(percentage)
+                    .build();
+
+            results.add(resultDTO);
+        }
+
+        // STEP 6: Sort by vote count (highest first)
+        results.sort((a, b) -> Long.compare(b.getVoteCount(), a.getVoteCount()));
+
+        // STEP 7: Assign ranks (1st, 2nd, 3rd, etc.)
+        for (int i = 0; i < results.size(); i++) {
+            results.get(i).setRank(i + 1);
+        }
+
+        log.info("Returning {} candidate results", results.size());
+
+        return results;
     }
 
-    /**
-     * Check if election is restricted (has eligible voter list)
-     */
+
     public boolean isRestricted(UUID electionId) {
         return electionVoterRepository.existsByElectionId(electionId);
     }
@@ -355,18 +465,14 @@ public class ElectionService {
             throw new BadRequestException("Can only delete DRAFT elections");
         }
 
-        if (voteRepository.countByElectionIdAndIsValid(electionId, true) > 0) {
+        /*if (voteRepository.countByElectionIdAndIsValid(electionId, true) > 0) {
             throw new BadRequestException("Cannot delete election with votes");
-        }
+        }*/
 
         electionRepository.delete(election);
 
         log.info("Election deleted: {}", election.getTitle());
     }
-
-    // ============================================
-    // HELPER METHODS
-    // ============================================
 
     private void notifyEligibleVoters(UUID electionId) {
         Election election = getElectionById(electionId);

@@ -4,6 +4,7 @@ import com.univer.voting.enums.ElectionStatus;
 import com.univer.voting.models.Election;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -23,4 +24,16 @@ public interface ElectionRepository extends JpaRepository<Election, UUID> {
     @Query("SELECT e FROM Election e WHERE e.status = 'ACTIVE' " +
             "AND e.endDate < :now")
     List<Election> findExpiredElections(LocalDateTime now);
+
+    @Query("select e FROM Election e where e.type = 'PUBLIC' " +
+            "AND e.status = 'ACTIVE'"
+    )
+    List<Election> findAllPublicElection();
+
+    @Query("SELECT DISTINCT e FROM Election e " +
+            "LEFT JOIN e.eligibleVoters ev " +
+            "WHERE e.type = 'PUBLIC' " +
+            "OR ev.id = :userId " +
+            "ORDER BY e.startDate DESC")
+    List<Election> findElectionsForVoter(@Param("userId") UUID userId);
 }

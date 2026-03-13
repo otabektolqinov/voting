@@ -5,11 +5,16 @@ import com.univer.voting.dto.request.AddEligibleVoterRequest;
 import com.univer.voting.dto.request.CreateElectionRequest;
 import com.univer.voting.dto.request.UpdateElectionRequest;
 import com.univer.voting.dto.response.ApiResponse;
+import com.univer.voting.dto.response.ElectionDTO;
+import com.univer.voting.dto.response.ElectionResultDTO;
 import com.univer.voting.enums.ElectionStatus;
+import com.univer.voting.exception.BadRequestException;
 import com.univer.voting.models.Candidate;
 import com.univer.voting.models.Election;
+import com.univer.voting.repository.ElectionRepository;
 import com.univer.voting.service.ElectionService;
 import com.univer.voting.models.ElectionVoter;
+import com.univer.voting.service.mapper.ElectionMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +34,8 @@ import java.util.UUID;
 public class ElectionController {
 
     private final ElectionService electionService;
+    private final ElectionRepository electionRepository;
+    private final ElectionMapper electionMapper;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'ELECTION_OFFICER')")
@@ -38,21 +45,25 @@ public class ElectionController {
     ) {
         log.info("Creating election: {}", request.getTitle());
 
-        Election election = electionService.createElection(
-                request.getTitle(),
-                request.getDescription(),
-                request.getStartDate(),
-                request.getEndDate(),
-                UUID.fromString(userId)
-        );
+        try {
+            Election election = electionService.createElection(request, UUID.fromString(userId));
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Election created successfully", election));
+            ElectionDTO dto = electionMapper.toDTO(election);
+
+            return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Election created successfully", dto));
+
+        } catch (Exception e) {
+            log.error("Error creating election", e);
+            return ResponseEntity
+                    .badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
     }
 
     @GetMapping
-    public ResponseEntity<List<Election>> getAllElections(
+    public ResponseEntity<List<ElectionDTO>> getAllElections(
             @RequestParam(required = false) ElectionStatus status
     ) {
         log.debug("Getting all elections with status: {}", status);
@@ -61,40 +72,60 @@ public class ElectionController {
                 ? electionService.getElectionsByStatus(status)
                 : electionService.getAllElections();
 
-        return ResponseEntity.ok(elections);
+        System.out.println(elections.get(3).getCandidates());
+        List<ElectionDTO> dtoList = electionMapper.toDTOList(elections);
+        return ResponseEntity.ok(dtoList);
     }
 
     @GetMapping("/active")
-    public ResponseEntity<List<Election>> getActiveElections() {
+    public ResponseEntity<List<ElectionDTO>> getActiveElections() {
         log.debug("Getting active elections");
 
         List<Election> elections = electionService.getActiveElections();
-
-        return ResponseEntity.ok(elections);
+        List<ElectionDTO> dtoList = electionMapper.toDTOList(elections);
+        return ResponseEntity.ok(dtoList);
     }
 
     @GetMapping("/my-elections")
-    public ResponseEntity<List<Election>> getMyElections(
+    public ResponseEntity<List<ElectionDTO>> getMyElections(
             @AuthenticationPrincipal String userId
     ) {
-        log.debug("Getting elections for user: {}", userId);
+        /*log.debug("Getting elections for user: {}", userId);
 
         List<Election> elections = electionService.getElectionsForUser(
                 UUID.fromString(userId)
         );
 
+        return ResponseEntity.ok(elections);*/
+
+//        List<Election> publicElections = electionRepository.findAllPublicElection();
+
+//        List<Election> restrictedElections = electionRepository.findByEligibleVoter(UUID.fromString(userId));
+
+        // Merge and return
+//        return ResponseEntity.ok(mergeElections(publicElections, restrictedElections));
+        List<ElectionDTO> elections = electionService.getElectionsForUser(UUID.fromString(userId));
+
+        // Convert to DTOs with user-specific data
+/*
+        List<ElectionDTO> dtos = electionMapper.toDTOList(elections, UUID.fromString(userId));
+*/
+
         return ResponseEntity.ok(elections);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Election> getElectionById(
-            @PathVariable UUID id
+    public ResponseEntity<ElectionDTO> getElectionById(
+            @PathVariable UUID id, @AuthenticationPrincipal String userId
     ) {
-        log.debug("Getting election: {}", id);
+        log.info("Getting election {} for user {}", id, userId);
 
         Election election = electionService.getElectionById(id);
 
-        return ResponseEntity.ok(election);
+        UUID userUuid = userId != null ? UUID.fromString(userId) : null;
+        ElectionDTO dto = electionMapper.toDTO(election, userUuid, false);
+
+        return ResponseEntity.ok(dto);
     }
 
     @PutMapping("/{id}")
@@ -105,17 +136,21 @@ public class ElectionController {
     ) {
         log.info("Updating election: {}", id);
 
-        Election election = electionService.updateElection(
-                id,
-                request.getTitle(),
-                request.getDescription(),
-                request.getStartDate(),
-                request.getEndDate()
-        );
+        try {
+            Election election = electionService.updateElection(id, request);
 
-        return ResponseEntity.ok(
-                ApiResponse.success("Election updated successfully", election)
-        );
+            ElectionDTO dto = electionMapper.toDTO(election);
+
+            return ResponseEntity.ok(
+                    ApiResponse.success("Election updated successfully", dto)
+            );
+
+        } catch (Exception e) {
+            log.error("Error updating election", e);
+            return ResponseEntity
+                    .badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
     }
 
     @DeleteMapping("/{id}")
@@ -125,11 +160,17 @@ public class ElectionController {
     ) {
         log.warn("Deleting election: {}", id);
 
-        electionService.deleteElection(id);
-
-        return ResponseEntity.ok(
-                ApiResponse.success("Election deleted successfully")
-        );
+        try {
+            electionService.deleteElection(id);
+            return ResponseEntity.ok(
+                    ApiResponse.success("Election deleted successfully")
+            );
+        } catch (Exception e) {
+            log.error("Error deleting election", e);
+            return ResponseEntity
+                    .badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
     }
 
     @PostMapping("/{id}/activate")
@@ -179,13 +220,27 @@ public class ElectionController {
     public ResponseEntity<ApiResponse> getResults(
             @PathVariable UUID id
     ) {
-        log.debug("Getting results for election: {}", id);
+        log.info("Getting results for election: {}", id);
 
-        List<Object[]> results = electionService.getElectionResults(id);
+        try {
+            // Call service to get results
+            List<ElectionResultDTO> results = electionService.getElectionResults(id);
 
-        return ResponseEntity.ok(
-                ApiResponse.success("Election results", results)
-        );
+            // Return in ApiResponse wrapper
+            return ResponseEntity.ok(
+                    ApiResponse.success("Election results retrieved successfully", results)
+            );
+
+        } catch (BadRequestException e) {
+            log.error("Cannot get results: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+
+        } catch (Exception e) {
+            log.error("Error getting results", e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to get election results"));
+        }
     }
 
     @PostMapping("/{id}/candidates")

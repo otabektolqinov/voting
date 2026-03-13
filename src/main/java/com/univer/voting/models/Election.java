@@ -1,6 +1,8 @@
 package com.univer.voting.models;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.univer.voting.enums.ElectionStatus;
+import com.univer.voting.enums.ElectionType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -47,6 +49,10 @@ public class Election {
     @Column(name = "status", nullable = false)
     @Builder.Default
     private ElectionStatus status = ElectionStatus.DRAFT;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false)
+    private ElectionType type;
 
     @Column(name = "created_by", nullable = false)
     private UUID createdBy;
