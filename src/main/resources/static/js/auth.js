@@ -8,16 +8,30 @@ import { stopNotificationPolling, startNotificationPolling } from './notificatio
 /**
  * Check if JWT token is expired
  */
+function decodeJwtPayload(token) {
+    const payloadPart = token?.split('.')?.[1];
+    if (!payloadPart) return null;
+
+    const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+    const paddedBase64 = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+
+    return JSON.parse(atob(paddedBase64));
+}
+
 function isTokenExpired(token) {
     if (!token) return true;
 
     try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
+        const payload = decodeJwtPayload(token);
+        if (!payload || typeof payload.exp !== 'number') {
+            return true;
+        }
+
         const expirationTime = payload.exp * 1000; // Convert to milliseconds
         const currentTime = Date.now();
 
-        // Add 1 minute buffer to refresh before actual expiry
-        return currentTime >= (expirationTime - 60000);
+        // Keep a small skew buffer for clock drift without expiring new tokens immediately.
+        return currentTime >= (expirationTime - 5000);
     } catch (error) {
         console.error('Error parsing token:', error);
         return true; // Treat invalid tokens as expired

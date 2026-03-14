@@ -92,8 +92,13 @@ export function getAuthToken() {
 }
 
 export function setAuthTokens(accessToken, refreshToken) {
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
+    if (accessToken) {
+        localStorage.setItem('accessToken', accessToken);
+    }
+
+    if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+    }
 }
 
 export function clearAuthTokens() {
