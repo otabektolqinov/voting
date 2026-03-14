@@ -1,12 +1,10 @@
 // Main application entry point
 import { checkAuth } from './auth.js';
-import { startNotificationPolling } from './notifications.js';
 
 // Initialize application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Voting System initialized');
     checkAuth();
-    startNotificationPolling();
 });
 
 // Handle page unload
