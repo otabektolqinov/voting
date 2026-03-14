@@ -21,6 +21,8 @@ export function updateNavbar() {
     const loginButton = document.getElementById('login-button');
     const user = getCurrentUser();
 
+    if (!navLinks || !loginButton) return;
+
     if (user) {
         navLinks.classList.remove('hidden');
         navLinks.classList.add('flex');
@@ -29,10 +31,17 @@ export function updateNavbar() {
         document.getElementById('user-name').textContent = user.fullName;
 
         const adminLink = document.getElementById('admin-link');
-        if (user.role === 'ADMIN' || user.role === 'ELECTION_OFFICER') {
-            adminLink.classList.remove('hidden');
-        } else {
-            adminLink.classList.add('hidden');
+        if (adminLink) {
+            if (user.role === 'ADMIN' || user.role === 'ELECTION_OFFICER') {
+                adminLink.classList.remove('hidden');
+                adminLink.onclick = (event) => {
+                    event.preventDefault();
+                    showAdminDashboard();
+                };
+            } else {
+                adminLink.classList.add('hidden');
+                adminLink.onclick = null;
+            }
         }
     } else {
         navLinks.classList.add('hidden');

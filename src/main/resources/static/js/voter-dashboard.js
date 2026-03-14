@@ -300,6 +300,7 @@ function getStatusColor(status) {
 
 export async function viewElection(electionId) {
     setCurrentElectionId(electionId);
+    setSelectedCandidateId(null);
     const token = getAuthToken();
 
     try {

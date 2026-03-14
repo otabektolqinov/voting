@@ -3,6 +3,7 @@ import { getCurrentUser, setCurrentUser, getAuthToken, setAuthTokens, clearAuthT
 import { showDashboardByRole } from './navigation.js';
 import { updateNavbar } from './navigation.js';
 import { showError, showSuccess } from './utils.js';
+import { stopNotificationPolling, startNotificationPolling } from './notifications.js';
 
 /**
  * Check if JWT token is expired
@@ -87,6 +88,15 @@ export function checkAuth() {
             // Token is still valid
             fetchCurrentUser();
         }
+    } else if (refreshToken) {
+        // If access token is missing but refresh token exists, restore session silently
+        refreshAccessToken().then(success => {
+            if (success) {
+                fetchCurrentUser();
+            } else {
+                logout();
+            }
+        });
     } else {
         // No token, show login
         showLogin();
@@ -136,6 +146,7 @@ export async function fetchCurrentUser() {
         setCurrentUser(user);
         updateNavbar();
         showDashboardByRole();
+        startNotificationPolling();
 
     } catch (error) {
         console.error('Network error fetching user:', error);
@@ -218,6 +229,7 @@ export async function handleLogin(event) {
 
         showDashboardByRole();
         updateNavbar();
+        startNotificationPolling();
 
     } catch (error) {
         showError('login-error', 'Network error. Please try again.');
@@ -274,6 +286,7 @@ export async function logout() {
 
     clearAuthTokens();
     setCurrentUser(null);
+    stopNotificationPolling();
 
     showLogin();
     updateNavbar();
