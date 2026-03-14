@@ -7,11 +7,34 @@ export const state = {
 };
 
 export function getCurrentUser() {
+    if (state.currentUser) {
+        return state.currentUser;
+    }
+
+    const userFromStorage = localStorage.getItem('currentUser');
+    if (!userFromStorage) {
+        return null;
+    }
+
+    try {
+        state.currentUser = JSON.parse(userFromStorage);
+    } catch (error) {
+        console.error('Error parsing current user from localStorage:', error);
+        localStorage.removeItem('currentUser');
+        state.currentUser = null;
+    }
+
     return state.currentUser;
 }
 
 export function setCurrentUser(user) {
     state.currentUser = user;
+
+    if (user) {
+        localStorage.setItem('currentUser', JSON.stringify(user));
+    } else {
+        localStorage.removeItem('currentUser');
+    }
 }
 
 export function getSelectedCandidateId() {
@@ -69,8 +92,13 @@ export function getAuthToken() {
 }
 
 export function setAuthTokens(accessToken, refreshToken) {
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
+    if (accessToken) {
+        localStorage.setItem('accessToken', accessToken);
+    }
+
+    if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+    }
 }
 
 export function clearAuthTokens() {

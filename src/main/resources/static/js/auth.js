@@ -3,20 +3,35 @@ import { getCurrentUser, setCurrentUser, getAuthToken, setAuthTokens, clearAuthT
 import { showDashboardByRole } from './navigation.js';
 import { updateNavbar } from './navigation.js';
 import { showError, showSuccess } from './utils.js';
+import { stopNotificationPolling, startNotificationPolling } from './notifications.js';
 
 /**
  * Check if JWT token is expired
  */
+function decodeJwtPayload(token) {
+    const payloadPart = token?.split('.')?.[1];
+    if (!payloadPart) return null;
+
+    const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+    const paddedBase64 = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+
+    return JSON.parse(atob(paddedBase64));
+}
+
 function isTokenExpired(token) {
     if (!token) return true;
 
     try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
+        const payload = decodeJwtPayload(token);
+        if (!payload || typeof payload.exp !== 'number') {
+            return true;
+        }
+
         const expirationTime = payload.exp * 1000; // Convert to milliseconds
         const currentTime = Date.now();
 
-        // Add 1 minute buffer to refresh before actual expiry
-        return currentTime >= (expirationTime - 60000);
+        // Keep a small skew buffer for clock drift without expiring new tokens immediately.
+        return currentTime >= (expirationTime - 5000);
     } catch (error) {
         console.error('Error parsing token:', error);
         return true; // Treat invalid tokens as expired
@@ -87,6 +102,15 @@ export function checkAuth() {
             // Token is still valid
             fetchCurrentUser();
         }
+    } else if (refreshToken) {
+        // If access token is missing but refresh token exists, restore session silently
+        refreshAccessToken().then(success => {
+            if (success) {
+                fetchCurrentUser();
+            } else {
+                logout();
+            }
+        });
     } else {
         // No token, show login
         showLogin();
@@ -136,6 +160,7 @@ export async function fetchCurrentUser() {
         setCurrentUser(user);
         updateNavbar();
         showDashboardByRole();
+        startNotificationPolling();
 
     } catch (error) {
         console.error('Network error fetching user:', error);
@@ -218,6 +243,7 @@ export async function handleLogin(event) {
 
         showDashboardByRole();
         updateNavbar();
+        startNotificationPolling();
 
     } catch (error) {
         showError('login-error', 'Network error. Please try again.');
@@ -274,6 +300,7 @@ export async function logout() {
 
     clearAuthTokens();
     setCurrentUser(null);
+    stopNotificationPolling();
 
     showLogin();
     updateNavbar();

@@ -5,6 +5,7 @@ import { formatTimeAgo } from './utils.js';
 let notificationInterval;
 
 export function startNotificationPolling() {
+    stopNotificationPolling();
     notificationInterval = setInterval(loadNotificationCount, POLLING_INTERVALS.NOTIFICATIONS);
     loadNotificationCount();
 }
@@ -24,8 +25,13 @@ export async function loadNotificationCount() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
+        if (!response.ok) {
+            updateNotificationBadge(0);
+            return;
+        }
+
         const data = await response.json();
-        updateNotificationBadge(data.count);
+        updateNotificationBadge(data.count || 0);
 
     } catch (error) {
         console.error('Error loading notification count:', error);
