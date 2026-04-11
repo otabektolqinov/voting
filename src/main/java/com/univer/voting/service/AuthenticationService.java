@@ -157,6 +157,9 @@ public class AuthenticationService {
         if (!user.getAccountActivated()) {
             throw new UnauthorizedException("Account not activated");
         }
+        if (!user.getEmailVerified()) {
+            throw new UnauthorizedException("Email is not verified. Please verify your email first");
+        }
         if (user.getAccountLocked()) {
             throw new UnauthorizedException("Account locked");
         }

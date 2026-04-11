@@ -14,12 +14,15 @@ import com.univer.voting.models.Election;
 import com.univer.voting.models.ElectionVoter;
 import com.univer.voting.repository.*;
 import com.univer.voting.service.mapper.ElectionMapper;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 
 /**
@@ -55,7 +58,7 @@ public class ElectionService {
             throw new BadRequestException("End date must be after start date");
         }
 
-        if (request.getStartDate().isBefore(LocalDateTime.now())) {
+        if (request.getStartDate().isBefore(LocalDateTime.now(ZoneOffset.UTC))) {
             throw new BadRequestException("Start date must be in the future");
         }
 
@@ -481,6 +484,12 @@ public class ElectionService {
         for (ElectionVoter ev : eligibleVoters) {
             // notificationService.notifyElectionCreated(ev.getUser(), election);
         }
+    }
+
+    @Transactional
+    @Scheduled(fixedRate = 60000) // har 60 sekund
+    public void closeExpiredElections() {
+        electionRepository.closeExpiredElections(LocalDateTime.now());
     }
 
     private void notifyResultsPublished(UUID electionId) {

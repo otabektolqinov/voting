@@ -42,6 +42,7 @@ public class ElectionMapper {
                 .startDate(election.getStartDate())
                 .endDate(election.getEndDate())
                 .status(election.getStatus())
+                .resultsPublished(election.getResultsPublished())
 //                .isPublic(election.getIsPublic())
                 .createdAt(election.getCreatedAt())
 //                .createdBy(election.getCreatedBy() != null ? election.getCreatedBy().getFullName() : null)

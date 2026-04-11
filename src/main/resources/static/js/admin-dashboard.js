@@ -708,22 +708,16 @@ export async function viewElectionResults(electionId) {
 
         const totalVotes = results.reduce((sum, result) => sum + (result.voteCount || 0), 0);
 
-        // ============================================
-        // ADD THESE LINES - Check if can publish
-        // ============================================
         const canPublish = election.status === 'CLOSED' && !election.resultsPublished;
         const isPublished = election.resultsPublished;
 
         console.log('Can publish?', canPublish);
         console.log('Is published?', isPublished);
-        // ============================================
 
         const resultsContainer = document.getElementById('results-container');
 
         resultsContainer.innerHTML = `
-            <!-- ============================================ -->
-            <!-- ADD THIS STATUS BANNER SECTION -->
-            <!-- ============================================ -->
+            
             ${isPublished ? `
                 <div class="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded">
                     <div class="flex items-center">
