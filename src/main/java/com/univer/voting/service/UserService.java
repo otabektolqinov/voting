@@ -12,11 +12,13 @@ import com.univer.voting.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -164,9 +166,26 @@ public class UserService {
     }
 
 
-    public Users getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    public List<UserResponse> getUserByEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Users> users = userRepository.findByEmailContainingIgnoreCaseAndRole(
+                email.trim(),
+                UserRole.VOTER
+        );
+
+        List<UserResponse> results = users.stream()
+                .limit(10)
+                .map(user -> UserResponse.builder()
+                        .id(user.getId())
+                        .email(user.getEmail())
+                        .fullName(user.getFullName())
+                        .username(user.getUsername())
+                        .build())
+                .toList();
+        return results;
     }
 
 

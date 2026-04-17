@@ -12,6 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,6 +56,16 @@ public class UserController {
         List<UserResponse> users = userService.getAllUsers();
 
         return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<UserResponse>> searchUsers(
+            @RequestParam(required = false) String email
+    ) {
+        List<UserResponse> results = userService.getUserByEmail(email);
+
+        return ResponseEntity.ok(results);
     }
 
     @PutMapping("/{id}/role")

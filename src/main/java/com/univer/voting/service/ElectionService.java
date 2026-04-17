@@ -62,19 +62,6 @@ public class ElectionService {
             throw new BadRequestException("Start date must be in the future");
         }
 
-        if (request.getIsPublic() || request.getVoterIds().isEmpty()) {
-            election.setType(ElectionType.PUBLIC);
-        } else {
-            election.setType(ElectionType.RESTRICTED);
-            for (String voterId : request.getVoterIds()) {
-                ElectionVoter ev = new ElectionVoter();
-                ev.setElection(election);
-                ev.setUser(userRepository.findById(UUID.fromString(voterId)).orElseThrow());
-                ev.setAddedBy(createdBy);
-                electionVoterRepository.save(ev);
-            }
-        }
-
         election.setTitle(request.getTitle());
         election.setDescription(request.getDescription());
         election.setStartDate(request.getStartDate());
@@ -83,6 +70,21 @@ public class ElectionService {
         election.setStatus(ElectionStatus.DRAFT);
 
         Election saved = electionRepository.save(election);
+
+        if (request.getVoterIds().isEmpty()) {
+            election.setType(ElectionType.PUBLIC);
+        } else {
+            election.setType(ElectionType.RESTRICTED);
+            for (String voterId : request.getVoterIds()) {
+                ElectionVoter ev = new ElectionVoter();
+                ev.setElection(saved);
+                ev.setUser(userRepository.findById(UUID.fromString(voterId)).orElseThrow());
+                ev.setAddedBy(createdBy);
+                electionVoterRepository.save(ev);
+            }
+        }
+
+
 
         List<Candidate> savedCandidates = new ArrayList<>();
         for (CandidateRequest candidateReq : request.getCandidates()) {

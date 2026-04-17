@@ -2,6 +2,7 @@ import { ENDPOINTS } from './config.js';
 import { getAuthToken, setEditingElectionId, getEditingElectionId, getSelectedVoters, setSelectedVoters, clearSelectedVoters, addSelectedVoter, removeSelectedVoter } from './state.js';
 import { showAdminDashboard } from './navigation.js';
 import { formatDate, formatDateForInput } from './utils.js';
+import {getSelectedVoterIds, initVoterAutocomplete} from "./voter-autocomplete.js";
 
 export async function loadAdminStats() {
     const token = getAuthToken();
@@ -267,14 +268,18 @@ export function showCreateElection() {
     document.getElementById('election-form').reset();
     document.getElementById('candidates-form-list').innerHTML = '';
     setEditingElectionId(null);
+/*
     clearSelectedVoters();
+*/
+    initVoterAutocomplete('voter-selection-container');
+
 
     // Add 2 default candidate fields
     addCandidateField();
     addCandidateField();
 
     // Update voter selection display
-    updateVoterSelectionDisplay();
+    // updateVoterSelectionDisplay();
 }
 
 export async function editElection(electionId) {
@@ -323,7 +328,11 @@ export async function editElection(electionId) {
         } else {
             const voterSection = document.getElementById('voter-selection-section');
             if (voterSection) voterSection.style.display = 'block';
-            await loadVotersForForm(electionId);
+            const votersResponse = await fetch(ENDPOINTS.ELECTIONS.voters(electionId), {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const voters = await votersResponse.json();
+            setSelectedVoters(voters.map(v => ({ id: v.user.id, fullName: v.user.fullName, email: v.user.email })));
         }
 
         // Load candidates
@@ -434,7 +443,7 @@ async function loadCandidatesForForm(electionId) {
     }
 }
 
-async function loadVotersForForm(electionId) {
+/*async function loadVotersForForm(electionId) {
     const token = getAuthToken();
 
     try {
@@ -454,7 +463,7 @@ async function loadVotersForForm(electionId) {
     } catch (error) {
         console.error('Error loading voters:', error);
     }
-}
+}*/
 
 export function addCandidateField() {
     const candidatesList = document.getElementById('candidates-form-list');
@@ -489,7 +498,7 @@ export function removeCandidateFromForm(button) {
     });
 }
 
-export async function searchVoters() {
+/*export async function searchVoters() {
     const searchTerm = document.getElementById('voter-search-input').value.trim();
 
     if (searchTerm.length < 2) {
@@ -532,14 +541,14 @@ export function addVoterToSelection(userId, fullName, email) {
     updateVoterSelectionDisplay();
     document.getElementById('voter-search-input').value = '';
     document.getElementById('voter-search-results').innerHTML = '';
-}
+}*/
 
-export function removeVoterFromSelection(voterId) {
+/*export function removeVoterFromSelection(voterId) {
     removeSelectedVoter(voterId);
     updateVoterSelectionDisplay();
-}
+}*/
 
-function updateVoterSelectionDisplay() {
+/*function updateVoterSelectionDisplay() {
     const container = document.getElementById('selected-voters-list');
     const voters = getSelectedVoters();
     const makePublicCheckbox = document.getElementById('election-public');
@@ -567,7 +576,7 @@ function updateVoterSelectionDisplay() {
             </button>
         </div>
     `).join('');
-}
+}*/
 
 export async function handleElectionSubmit(event) {
     event.preventDefault();
@@ -578,6 +587,9 @@ export async function handleElectionSubmit(event) {
     const startDate = document.getElementById('election-start-date').value;
     const endDate = document.getElementById('election-end-date').value;
     const isPublic = document.getElementById('election-public')?.checked || false;
+
+    const eligibleVoterIds = getSelectedVoterIds();
+    const type = eligibleVoterIds.length > 0 ? 'RESTRICTED' : 'PUBLIC';
 
     const candidateElements = document.querySelectorAll('#candidates-form-list > div');
     const candidates = Array.from(candidateElements).map(el => ({
@@ -598,8 +610,8 @@ export async function handleElectionSubmit(event) {
         startDate: new Date(startDate).toISOString(),
         endDate: new Date(endDate).toISOString(),
         candidates,
-        isPublic: isPublic,
-        voterIds: isPublic ? [] : getSelectedVoters().map(v => v.id)
+        type,
+        voterIds: type === 'PUBLIC' ? [] : eligibleVoterIds
     };
 
     try {
@@ -631,6 +643,7 @@ export async function handleElectionSubmit(event) {
         }
 
         alert(getEditingElectionId() ? 'Election updated successfully!' : 'Election created successfully!');
+        clearSelectedVoters();
         showAdminDashboard();
 
     } catch (error) {
@@ -902,8 +915,8 @@ window.viewElectionResults = viewElectionResults;
 window.addCandidateField = addCandidateField;
 window.removeCandidateFromForm = removeCandidateFromForm;
 window.handleElectionSubmit = handleElectionSubmit;
-window.searchVoters = searchVoters;
-window.addVoterToSelection = addVoterToSelection;
-window.removeVoterFromSelection = removeVoterFromSelection;
-window.updateVoterSelectionDisplay = updateVoterSelectionDisplay;
+// window.searchVoters = searchVoters;
+// window.addVoterToSelection = addVoterToSelection;
+// window.removeVoterFromSelection = removeVoterFromSelection;
+// window.updateVoterSelectionDisplay = updateVoterSelectionDisplay;
 window.publishElectionResults = publishElectionResults;

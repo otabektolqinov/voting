@@ -23,7 +23,7 @@ public class ElectionDTO {
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private ElectionStatus status;
-    private Boolean isPublic;
+    private Boolean type;
 
     private List<CandidateDTO> candidates;
 

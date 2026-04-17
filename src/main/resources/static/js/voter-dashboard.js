@@ -279,8 +279,8 @@ function showResultsModal(election, results) {
     }).join('')}
             </div>
 
-            <button onclick="this.closest('.fixed').remove()" 
-                    class="mt-6 w-full px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-semibold">
+            <button onclick="this.closest('.fixed').remove(); window.currentUserRole === 'ADMIN' ? window.showAdminDashboard() : window.showVoterDashboard()" 
+                class="mt-6 w-full px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-semibold">
                 Close
             </button>
         </div>

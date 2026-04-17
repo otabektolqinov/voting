@@ -20,7 +20,7 @@ public class CreateElectionRequest {
 
     private String description;
 
-    private Boolean isPublic;
+    private String type;
 
     @NotNull(message = "Start date is required")
     private LocalDateTime startDate;
