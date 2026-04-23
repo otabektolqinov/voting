@@ -33,7 +33,14 @@ public class VoteController {
             HttpServletRequest httpRequest
     ) {
         log.info("User {} casting vote in election {}", userId, request.getElectionId());
-
+        System.out.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+        System.out.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+        System.out.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+        System.out.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+        System.out.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+        System.out.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+        System.out.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+        System.out.println(request.getOtp());
         try {
             // Extract IP address and user agent for audit trail (hashed for privacy)
             String ipAddress = getClientIpAddress(httpRequest);
@@ -44,7 +51,8 @@ public class VoteController {
                     request.getElectionId(),
                     request.getCandidateId(),
                     ipAddress,
-                    userAgent
+                    userAgent,
+                    request.getOtp()
             );
 
             // Return minimal information (don't expose candidate choice)

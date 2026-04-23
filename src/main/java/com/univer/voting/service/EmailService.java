@@ -6,11 +6,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@EnableAsync
 public class EmailService {
 
     private final JavaMailSender mailSender;
@@ -50,7 +52,7 @@ public class EmailService {
 
     public void sendEmailVerification(Users user) {
         String subject = "Verify Your Email Address";
-        String verificationLink = "https://google.com" /*+ user.getVerificationToken()*/;
+        String verificationLink = "http://localhost:8080/api/auth/verify-email?token=" + user.getVerificationToken();
 
         String body = String.format("""
             Dear %s,
@@ -95,7 +97,7 @@ public class EmailService {
     /**
      * Generic email sender
      */
-    private void sendEmail(String to, String subject, String body) {
+    public void sendEmail(String to, String subject, String body) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromEmail);
@@ -107,6 +109,29 @@ public class EmailService {
             log.debug("Email sent successfully to: {}", to);
         } catch (Exception ex) {
             log.error("Failed to send email to: {}", to, ex);
+            throw new RuntimeException("Email sending failed", ex);
         }
+    }
+
+    public void sendOtpEmail(Users user, String otpCode) {
+        String subject = "Your Voting OTP Code";
+
+        String body = String.format("""
+        Dear %s,
+        
+        Your OTP code to confirm your vote is:
+        
+        %s
+        
+        This code expires in 1 minute.
+        
+        If you did not request this, please ignore this email.
+        
+        Best regards,
+        %s Team
+        """, user.getFullName(), otpCode, appName);
+
+        sendEmail(user.getEmail(), subject, body);
+        log.info("OTP email sent to: {}", user.getEmail());
     }
 }

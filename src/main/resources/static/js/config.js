@@ -28,7 +28,11 @@ export const ENDPOINTS = {
     },
     USERS: {
         BASE: `${API_URL}/users`,
-        SEARCH: `${API_URL}/users/search`
+        SEARCH: `${API_URL}/users/search`,
+        byId: (id) => `/api/users/${id}`,
+        toggleActivation: (id) => `/api/users/${id}/toggle-activation`,
+        updateRole: (id) => `/api/users/${id}/role`,
+        delete: (id) => `/api/users/${id}`,
     }
 };
 

@@ -98,6 +98,14 @@ public class UserController {
         );
     }
 
+    @PutMapping("/{id}/toggle-activation")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse> toggleActivation(@PathVariable UUID id) {
+        log.info("Toggling activation for user: {}", id);
+        UserResponse user = userService.toggleActivation(id);
+        return ResponseEntity.ok(ApiResponse.success("Account activation updated", user));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> deleteUser(

@@ -136,6 +136,14 @@ public class UserService {
         return mapToUserResponse(activatedUser);
     }
 
+    public UserResponse toggleActivation(UUID id) {
+        Users user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setAccountActivated(!user.getAccountActivated());
+        userRepository.save(user);
+        return mapToUserResponse(user);
+    }
+
     /**
      * Verify user email
      */

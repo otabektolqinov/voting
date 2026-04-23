@@ -12,4 +12,7 @@ public class CastVoteRequest {
 
     @NotNull(message = "Candidate ID is required")
     private UUID candidateId;
+
+    @NotNull(message = "OTP is required")
+    private String otp;
 }

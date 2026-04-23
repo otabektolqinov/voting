@@ -1,6 +1,7 @@
 import { getCurrentUser } from './state.js';
 import { loadElections } from './voter-dashboard.js';
 import { loadAdminStats, loadAllElections } from './admin-dashboard.js';
+import {loadAllUsers} from "./admin-users.js";
 
 export function showDashboardByRole() {
     const user = getCurrentUser();

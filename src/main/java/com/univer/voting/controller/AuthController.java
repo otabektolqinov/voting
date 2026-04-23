@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -128,16 +129,26 @@ public class AuthController {
     }
 
     @GetMapping("/verify-email")
-    public ResponseEntity<ApiResponse> verifyEmail(
-            @RequestParam("token") String token
+    public String verifyEmail(
+            @RequestParam("token") String token,
+            Model model
     ) {
         log.info("Email verification attempt with token: {}", token);
 
-        userService.verifyEmail(token);
+        /*userService.verifyEmail(token);
 
         return ResponseEntity.ok(
                 ApiResponse.success("Email verified successfully!")
-        );
+        );*/try {
+            userService.verifyEmail(token);
+            model.addAttribute("success", true);
+            model.addAttribute("message", "Your email has been verified successfully!");
+        } catch (Exception e) {
+            model.addAttribute("success", false);
+            model.addAttribute("message", "Invalid or expired verification link.");
+        }
+        return "email-verified";
+
     }
 
 

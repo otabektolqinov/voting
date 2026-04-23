@@ -396,12 +396,34 @@ export function confirmVote() {
         return;
     }
 
-    if (confirm('Are you sure you want to cast this vote? This action cannot be undone.')) {
-        castVote();
+    requestOtp();
+}
+
+async function requestOtp() {
+    const token = getAuthToken();
+
+    // Show modal immediately with loading state
+    showOtpModal(async (otpValue) => {
+        await castVote(otpValue);
+    });
+
+    // Send OTP in background
+    try {
+        const response = await fetch('/api/otp/send', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            closeOtpModal();
+            alert('Failed to send OTP. Please try again.');
+        }
+    } catch (error) {
+        closeOtpModal();
+        alert('Failed to send OTP. Please try again.');
     }
 }
 
-async function castVote() {
+async function castVote(otp) {
     const token = getAuthToken();
 
     try {
@@ -413,16 +435,17 @@ async function castVote() {
             },
             body: JSON.stringify({
                 electionId: getCurrentElectionId(),
-                candidateId: getSelectedCandidateId()
+                candidateId: getSelectedCandidateId(),
+                otp: otp
             })
         });
 
         if (!response.ok) {
             const error = await response.json();
-            alert(error.message || 'Failed to cast vote');
-            return;
+            throw new Error(error.message || 'Failed to cast vote'); // ← throw, not alert
         }
 
+        closeOtpModal();
         document.getElementById('vote-button').classList.add('hidden');
         document.getElementById('candidates-list').style.pointerEvents = 'none';
         document.getElementById('candidates-list').style.opacity = '0.6';
@@ -432,10 +455,97 @@ async function castVote() {
             showVoterDashboard();
         }, 2000);
 
+
     } catch (error) {
         console.error('Error casting vote:', error);
         alert('Network error. Please try again.');
     }
+}
+
+function showOtpModal(onSubmit) {
+    const modal = document.createElement('div');
+    modal.id = 'otp-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4">
+            <div class="text-center mb-6">
+                <div class="text-5xl mb-3">🔐</div>
+                <h2 class="text-2xl font-bold text-gray-900">Verify Your Vote</h2>
+                <p class="text-gray-500 mt-2 text-sm">We're sending a 6-digit OTP to your email...</p>
+            </div>
+
+            <div class="mb-4">
+                <input 
+                    id="otp-input"
+                    type="text" 
+                    maxlength="6"
+                    placeholder="Enter 6-digit OTP"
+                    class="w-full text-center text-2xl font-bold tracking-widest border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500 transition-colors"
+                />
+            </div>
+
+            <p id="otp-error" class="text-red-500 text-sm text-center mb-4 hidden"></p>
+
+            <button 
+                id="otp-submit-btn"
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-colors"
+                onclick="handleOtpSubmit()">
+                Confirm Vote
+            </button>
+
+            <button 
+                class="w-full mt-3 text-gray-500 hover:text-gray-700 font-semibold py-2 transition-colors"
+                onclick="closeOtpModal()">
+                Cancel
+            </button>
+
+            <p class="text-center text-xs text-gray-400 mt-4">OTP expires in 1 minute</p>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Auto focus input
+    setTimeout(() => document.getElementById('otp-input')?.focus(), 100);
+
+    // Store callback
+    window._otpCallback = onSubmit;
+
+    // Allow Enter key to submit
+    document.getElementById('otp-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleOtpSubmit();
+    });
+}
+
+window.handleOtpSubmit = async function() {
+    const otpValue = document.getElementById('otp-input')?.value?.trim();
+    const errorEl = document.getElementById('otp-error');
+    const btn = document.getElementById('otp-submit-btn');
+
+    if (!otpValue || otpValue.length !== 6) {
+        errorEl.textContent = 'Please enter the 6-digit OTP';
+        errorEl.classList.remove('hidden');
+        return;
+    }
+
+    // Show loading state
+    btn.textContent = 'Verifying...';
+    btn.disabled = true;
+    errorEl.classList.add('hidden');
+
+    try {
+        await window._otpCallback(otpValue);
+        closeOtpModal();
+    } catch (error) {
+        btn.textContent = 'Confirm Vote';
+        btn.disabled = false;
+        errorEl.textContent = error.message || 'Invalid OTP. Please try again.';
+        errorEl.classList.remove('hidden');
+    }
+}
+
+window.closeOtpModal = function() {
+    document.getElementById('otp-modal')?.remove();
+    window._otpCallback = null;
 }
 
 function hideAllPages() {

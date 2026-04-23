@@ -1,14 +1,21 @@
-import { ENDPOINTS } from './config.js';
-import { getAuthToken, setEditingElectionId, getEditingElectionId, getSelectedVoters, setSelectedVoters, clearSelectedVoters, addSelectedVoter, removeSelectedVoter } from './state.js';
-import { showAdminDashboard } from './navigation.js';
-import { formatDate, formatDateForInput } from './utils.js';
+import {ENDPOINTS} from './config.js';
+import {
+    clearSelectedVoters,
+    getAuthToken,
+    getEditingElectionId,
+    setEditingElectionId,
+    setSelectedVoters
+} from './state.js';
+import {showAdminDashboard} from './navigation.js';
+import {formatDate, formatDateForInput} from './utils.js';
 import {getSelectedVoterIds, initVoterAutocomplete} from "./voter-autocomplete.js";
+import {loadUserStats} from "./admin-users.js";
 
 export async function loadAdminStats() {
     const token = getAuthToken();
 
     try {
-        const response = await fetch(ENDPOINTS.ELECTIONS.BASE, {
+        /*const response = await fetch(ENDPOINTS.ELECTIONS.BASE, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const elections = await response.json();
@@ -57,9 +64,34 @@ export async function loadAdminStats() {
                     </div>
                 </div>
             </div>
-        `;
+        `;*/
 
-        document.getElementById('admin-stats').innerHTML = statsHtml;
+        const [electionsRes, userStats] = await Promise.all([
+            fetch(ENDPOINTS.ELECTIONS.BASE, { headers: { 'Authorization': `Bearer ${token}` } }),
+            loadUserStats()
+        ]);
+        const elections = await electionsRes.json();
+
+        document.getElementById('admin-stats').innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl shadow-xl p-6 text-white">
+                    <p class="text-indigo-100 text-sm font-medium">Total Elections</p>
+                    <p class="text-4xl font-bold mt-2">${elections.length}</p>
+                </div>
+                <div class="bg-gradient-to-br from-green-500 to-green-700 rounded-2xl shadow-xl p-6 text-white">
+                    <p class="text-green-100 text-sm font-medium">Active Elections</p>
+                    <p class="text-4xl font-bold mt-2">${elections.filter(e => e.status === 'ACTIVE').length}</p>
+                </div>
+                <div class="bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl shadow-xl p-6 text-white">
+                    <p class="text-purple-100 text-sm font-medium">Upcoming Elections</p>
+                    <p class="text-4xl font-bold mt-2">${elections.filter(e => e.status === 'UPCOMING').length}</p>
+                </div>
+                <div class="bg-gradient-to-br from-rose-500 to-rose-700 rounded-2xl shadow-xl p-6 text-white">
+                    <p class="text-rose-100 text-sm font-medium">Total Users</p>
+                    <p class="text-4xl font-bold mt-2">${userStats.total}</p>
+                </div>
+            </div>
+        `;
 
     } catch (error) {
         console.error('Error loading admin stats:', error);

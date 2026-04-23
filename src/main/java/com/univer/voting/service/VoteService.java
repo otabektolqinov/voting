@@ -34,13 +34,16 @@ public class VoteService {
     private final CandidateRepository candidateRepository;
     private final UserRepository userRepository;
     private final ElectionService electionService;
+    private final OtpService otpService;
 
     private static final String ENCRYPTION_ALGORITHM = "AES";
     private static final String HASH_ALGORITHM = "SHA-256";
 
     @Transactional
-    public Vote castVote(UUID userId, UUID electionId, UUID candidateId, String ipAddress, String userAgent) {
+    public Vote castVote(UUID userId, UUID electionId, UUID candidateId, String ipAddress, String userAgent, String otp) {
         log.info("Processing encrypted vote: user={}, election={}, candidate={}", userId, electionId, candidateId);
+
+        otpService.validateOtp(userId, otp);
 
         // 1. Get user
         Users user = userRepository.findById(userId)

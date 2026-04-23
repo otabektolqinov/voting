@@ -95,28 +95,4 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean
-    public JavaMailSender mailSender(){
-        return new JavaMailSender() {
-            @Override
-            public MimeMessage createMimeMessage() {
-                return null;
-            }
-
-            @Override
-            public MimeMessage createMimeMessage(InputStream contentStream) throws MailException {
-                return null;
-            }
-
-            @Override
-            public void send(MimeMessage... mimeMessages) throws MailException {
-
-            }
-
-            @Override
-            public void send(SimpleMailMessage... simpleMessages) throws MailException {
-
-            }
-        };
-    }
 }
