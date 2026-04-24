@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: voting_user
       POSTGRES_PASSWORD: 1234
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,6 +21,8 @@ services:
     container_name: voting_app
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/voting_db
       SPRING_DATASOURCE_USERNAME: voting_user
