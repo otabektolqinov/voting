@@ -28,7 +28,7 @@ public class EmailService {
 
     public void sendActivationEmail(Users user) {
         String subject = "Activate Your Voting Account";
-        String activationLink = "http://localhost:8080/activate?token=" + user.getActivationToken();
+        String activationLink = "http://91.99.215.33:9090/activate?token=" + user.getActivationToken();
 
         String body = String.format("""
             Dear %s,
@@ -52,7 +52,7 @@ public class EmailService {
 
     public void sendEmailVerification(Users user) {
         String subject = "Verify Your Email Address";
-        String verificationLink = "http://localhost:8080/api/auth/verify-email?token=" + user.getVerificationToken();
+        String verificationLink = "http://91.99.215.33:9090/api/auth/verify-email?token=" + user.getVerificationToken();
 
         String body = String.format("""
             Dear %s,
@@ -72,7 +72,7 @@ public class EmailService {
 
     public void sendPasswordResetEmail(Users user, String resetToken) {
         String subject = "Reset Your Password";
-        String resetLink = "http://localhost:8080/reset-password?token=" + resetToken;
+        String resetLink = "http://91.99.215.33:9090/reset-password?token=" + resetToken;
 
         String body = String.format("""
             Dear %s,
