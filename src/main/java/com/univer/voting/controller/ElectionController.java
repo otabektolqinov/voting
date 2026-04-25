@@ -72,7 +72,6 @@ public class ElectionController {
                 ? electionService.getElectionsByStatus(status)
                 : electionService.getAllElections();
 
-        System.out.println(elections.get(3).getCandidates());
         List<ElectionDTO> dtoList = electionMapper.toDTOList(elections);
         return ResponseEntity.ok(dtoList);
     }

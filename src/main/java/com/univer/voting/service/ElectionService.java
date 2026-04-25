@@ -69,12 +69,15 @@ public class ElectionService {
         election.setCreatedBy(createdBy);
         election.setStatus(ElectionStatus.DRAFT);
 
-        Election saved = electionRepository.save(election);
-
-        if (request.getVoterIds().isEmpty()) {
+        if (request.getVoterIds() == null || request.getVoterIds().isEmpty()) {
             election.setType(ElectionType.PUBLIC);
         } else {
             election.setType(ElectionType.RESTRICTED);
+        }
+
+        Election saved = electionRepository.save(election);
+
+        if (election.getType() == ElectionType.RESTRICTED) {
             for (String voterId : request.getVoterIds()) {
                 ElectionVoter ev = new ElectionVoter();
                 ev.setElection(saved);
