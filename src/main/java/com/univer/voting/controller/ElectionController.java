@@ -62,6 +62,7 @@ public class ElectionController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'ELECTION_OFFICER')")
     @GetMapping
     public ResponseEntity<List<ElectionDTO>> getAllElections(
             @RequestParam(required = false) ElectionStatus status
@@ -76,6 +77,7 @@ public class ElectionController {
         return ResponseEntity.ok(dtoList);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'ELECTION_OFFICER')")
     @GetMapping("/active")
     public ResponseEntity<List<ElectionDTO>> getActiveElections() {
         log.debug("Getting active elections");
