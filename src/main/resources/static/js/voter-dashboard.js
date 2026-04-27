@@ -1,7 +1,7 @@
 import { ENDPOINTS } from './config.js';
 import { getAuthToken, setSelectedCandidateId, setCurrentElectionId, getCurrentElectionId, getSelectedCandidateId } from './state.js';
 import { showVoterDashboard } from './navigation.js';
-import { formatDate } from './utils.js';
+import { formatDate, sanitize } from './utils.js';
 
 let currentFilter = 'all';
 
@@ -165,12 +165,12 @@ function renderElectionCard(election) {
         <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-all cursor-pointer border-2 border-transparent hover:border-indigo-500"
              onclick="${election.status === 'ACTIVE' && !election.hasVoted ? `viewElection('${election.id}')` : ''}">
             <div class="flex justify-between items-start mb-4">
-                <h3 class="text-xl font-bold text-gray-900">${election.title}</h3>
+                <h3 class="text-xl font-bold text-gray-900">${sanitize(election.title)}</h3>
                 <span class="px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(election.status)}">
                     ${election.status}
                 </span>
             </div>
-            <p class="text-gray-600 mb-4 line-clamp-2">${election.description || 'No description'}</p>
+            <p class="text-gray-600 mb-4 line-clamp-2">${sanitize(election.description) || 'No description'}</p>
             <div class="flex items-center text-sm text-gray-500 space-x-2">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -227,7 +227,7 @@ function showResultsModal(election, results) {
         <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8" onclick="event.stopPropagation()">
             <div class="flex justify-between items-start mb-6">
                 <div>
-                    <h2 class="text-3xl font-bold text-gray-900">${election.title}</h2>
+                    <h2 class="text-3xl font-bold text-gray-900">${sanitize(election.title)}</h2>
                     <p class="text-gray-600 mt-2">Election Results</p>
                 </div>
                 <button onclick="this.closest('.fixed').remove()" 
@@ -262,8 +262,8 @@ function showResultsModal(election, results) {
                             ` : ''}
                             <div class="flex justify-between items-center">
                                 <div>
-                                    <h4 class="font-bold text-lg">${result.candidateName}</h4>
-                                    ${result.partyAffiliation ? `<p class="text-sm text-gray-600">${result.partyAffiliation}</p>` : ''}
+                                    <h4 class="font-bold text-lg">${sanitize(result.candidateName)}</h4>
+                                    ${result.partyAffiliation ? `<p class="text-sm text-gray-600">${sanitize(result.partyAffiliation)}</p>` : ''}
                                 </div>
                                 <div class="text-right">
                                     <div class="text-2xl font-bold text-indigo-600">${result.voteCount}</div>
@@ -314,15 +314,11 @@ export async function viewElection(electionId) {
 
         const election = await response.json();
 
-        // DEBUG: Log to see what we got
-        console.log('Election loaded:', election);
-        console.log('Candidates in election:', election.candidates);
-
         hideAllPages();
         document.getElementById('election-details-page').classList.remove('hidden');
 
-        document.getElementById('election-title').textContent = election.title;
-        document.getElementById('election-description').textContent = election.description || 'No description';
+        document.getElementById('election-title').textContent = sanitize(election.title);
+        document.getElementById('election-description').textContent = sanitize(election.description) || 'No description';
         document.getElementById('election-dates').innerHTML = `
             <svg class="h-5 w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -351,9 +347,9 @@ export async function viewElection(electionId) {
                             <input type="radio" name="candidate" value="${candidate.id}"
                                    class="mt-1 mr-4 h-5 w-5 text-indigo-600 focus:ring-2 focus:ring-indigo-500">
                             <div class="flex-1">
-                                <h4 class="font-bold text-xl text-gray-900">${candidate.name}</h4>
-                                ${candidate.partyAffiliation ? `<p class="text-sm text-indigo-600 font-semibold mt-1">${candidate.partyAffiliation}</p>` : ''}
-                                ${candidate.bio ? `<p class="text-gray-600 mt-2">${candidate.bio}</p>` : ''}
+                                <h4 class="font-bold text-xl text-gray-900">${sanitize(candidate.name)}</h4>
+                                ${candidate.partyAffiliation ? `<p class="text-sm text-indigo-600 font-semibold mt-1">${sanitize(candidate.partyAffiliation)}</p>` : ''}
+                                ${candidate.bio ? `<p class="text-gray-600 mt-2">${sanitize(candidate.bio)}</p>` : ''}
                             </div>
                         </div>
                     </div>

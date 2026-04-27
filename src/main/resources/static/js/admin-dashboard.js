@@ -7,7 +7,7 @@ import {
     setSelectedVoters
 } from './state.js';
 import {showAdminDashboard} from './navigation.js';
-import {formatDate, formatDateForInput} from './utils.js';
+import {formatDate, formatDateForInput, sanitize} from './utils.js';
 import {getSelectedVoterIds, initVoterAutocomplete} from "./voter-autocomplete.js";
 import {loadUserStats} from "./admin-users.js";
 
@@ -15,56 +15,6 @@ export async function loadAdminStats() {
     const token = getAuthToken();
 
     try {
-        /*const response = await fetch(ENDPOINTS.ELECTIONS.BASE, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const elections = await response.json();
-
-        const statsHtml = `
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div class="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl shadow-xl p-6 text-white">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-indigo-100 text-sm font-medium">Total Elections</p>
-                            <p class="text-4xl font-bold mt-2">${elections.length}</p>
-                        </div>
-                        <div class="bg-white bg-opacity-20 p-4 rounded-xl">
-                            <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-gradient-to-br from-green-500 to-green-700 rounded-2xl shadow-xl p-6 text-white">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-green-100 text-sm font-medium">Active Elections</p>
-                            <p class="text-4xl font-bold mt-2">${elections.filter(e => e.status === 'ACTIVE').length}</p>
-                        </div>
-                        <div class="bg-white bg-opacity-20 p-4 rounded-xl">
-                            <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl shadow-xl p-6 text-white">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-purple-100 text-sm font-medium">Upcoming Elections</p>
-                            <p class="text-4xl font-bold mt-2">${elections.filter(e => e.status === 'UPCOMING').length}</p>
-                        </div>
-                        <div class="bg-white bg-opacity-20 p-4 rounded-xl">
-                            <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;*/
 
         const [electionsRes, userStats] = await Promise.all([
             fetch(ENDPOINTS.ELECTIONS.BASE, { headers: { 'Authorization': `Bearer ${token}` } }),
@@ -143,8 +93,8 @@ export async function loadAllElections() {
                 return `
                                 <tr class="hover:bg-gray-50 transition-colors">
                                     <td class="px-6 py-4">
-                                        <div class="text-sm font-semibold text-gray-900">${election.title}</div>
-                                        <div class="text-xs text-gray-500">${election.description ? election.description.substring(0, 50) + '...' : ''}</div>
+                                        <div class="text-sm font-semibold text-gray-900">${sanitize(election.title)}</div>
+                                        <div class="text-xs text-gray-500">${sanitize(election.description) ? election.description.substring(0, 50) + '...' : ''}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(election.status)}">
@@ -174,8 +124,8 @@ export async function loadAllElections() {
                 return `
                                 <tr class="hover:bg-gray-50 transition-colors">
                                     <td class="px-6 py-4">
-                                        <div class="text-sm font-semibold text-gray-900">${election.title}</div>
-                                        <div class="text-xs text-gray-500">${election.description ? election.description.substring(0, 50) + '...' : ''}</div>
+                                        <div class="text-sm font-semibold text-gray-900">${sanitize(election.title)}</div>
+                                        <div class="text-xs text-gray-500">${sanitize(election.description) ? election.description.substring(0, 50) + '...' : ''}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(election.status)}">
@@ -214,8 +164,8 @@ export async function loadAllElections() {
                 return `
                                 <tr class="hover:bg-gray-50 transition-colors">
                                     <td class="px-6 py-4">
-                                        <div class="text-sm font-semibold text-gray-900">${election.title}</div>
-                                        <div class="text-xs text-gray-500">${election.description ? election.description.substring(0, 50) + '...' : ''}</div>
+                                        <div class="text-sm font-semibold text-gray-900">${sanitize(election.title)}</div>
+                                        <div class="text-xs text-gray-500">${sanitize(election.description) ? election.description.substring(0, 50) + '...' : ''}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(election.status)}">
@@ -249,8 +199,8 @@ export async function loadAllElections() {
                 return `
                                 <tr class="hover:bg-gray-50 transition-colors">
                                     <td class="px-6 py-4">
-                                        <div class="text-sm font-semibold text-gray-900">${election.title}</div>
-                                        <div class="text-xs text-gray-500">${election.description ? election.description.substring(0, 50) + '...' : ''}</div>
+                                        <div class="text-sm font-semibold text-gray-900">${sanitize(election.title)}</div>
+                                        <div class="text-xs text-gray-500">${sanitize(election.description) ? election.description.substring(0, 50) + '...' : ''}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(election.status)}">
@@ -342,8 +292,8 @@ export async function editElection(electionId) {
         document.getElementById('election-form-title').textContent = 'Edit Election';
 
         // Populate basic fields
-        document.getElementById('election-title-input').value = election.title || '';
-        document.getElementById('election-description-input').value = election.description || '';
+        document.getElementById('election-title-input').value = sanitize(election.title) || '';
+        document.getElementById('election-description-input').value = sanitize(election.description) || '';
         document.getElementById('election-start-date').value = formatDateForInput(election.startDate);
         document.getElementById('election-end-date').value = formatDateForInput(election.endDate);
 
@@ -386,9 +336,9 @@ export async function editElection(electionId) {
                         </button>
                     </div>
                     <input type="hidden" class="candidate-id" value="${candidate.id || ''}">
-                    <input type="text" class="candidate-name w-full px-4 py-2 border border-gray-300 rounded-lg mb-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Candidate Name" value="${candidate.name || ''}" required>
-                    <input type="text" class="candidate-party w-full px-4 py-2 border border-gray-300 rounded-lg mb-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Party Affiliation (Optional)" value="${candidate.partyAffiliation || ''}">
-                    <textarea class="candidate-bio w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Biography (Optional)" rows="2">${candidate.bio || ''}</textarea>
+                    <input type="text" class="candidate-name w-full px-4 py-2 border border-gray-300 rounded-lg mb-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Candidate Name" value="${sanitize(candidate.name) || ''}" required>
+                    <input type="text" class="candidate-party w-full px-4 py-2 border border-gray-300 rounded-lg mb-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Party Affiliation (Optional)" value="${sanitize(candidate.partyAffiliation) || ''}">
+                    <textarea class="candidate-bio w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Biography (Optional)" rows="2">${sanitize(candidate.bio) || ''}</textarea>
                 `;
                 candidatesContainer.appendChild(candidateDiv);
             });
@@ -748,8 +698,8 @@ export async function viewElectionResults(electionId) {
         hideAllPages();
         document.getElementById('election-results-page').classList.remove('hidden');
 
-        document.getElementById('results-title').textContent = election.title;
-        document.getElementById('results-description').textContent = election.description || 'No description';
+        document.getElementById('results-title').textContent = sanitize(election.title);
+        document.getElementById('results-description').textContent = sanitize(election.description) || 'No description';
 
         const totalVotes = results.reduce((sum, result) => sum + (result.voteCount || 0), 0);
 
@@ -818,8 +768,8 @@ export async function viewElectionResults(electionId) {
                             ` : ''}
                             <div class="flex justify-between items-center mb-3">
                                 <div>
-                                    <h4 class="font-bold text-xl text-gray-900">${result.candidateName}</h4>
-                                    ${result.partyAffiliation ? `<p class="text-sm text-gray-600 mt-1">${result.partyAffiliation}</p>` : ''}
+                                    <h4 class="font-bold text-xl text-gray-900">${sanitize(result.candidateName)}</h4>
+                                    ${sanitize(result.partyAffiliation) ? `<p class="text-sm text-gray-600 mt-1">${sanitize(result.partyAffiliation)}</p>` : ''}
                                 </div>
                                 <div class="text-right">
                                     <div class="text-3xl font-bold text-indigo-600">${result.voteCount}</div>
@@ -836,9 +786,6 @@ export async function viewElectionResults(electionId) {
         }).join('')}
             </div>
             
-            <!-- ============================================ -->
-            <!-- REPLACE YOUR "Back Button" SECTION WITH THIS -->
-            <!-- ============================================ -->
             <div class="mt-8 flex gap-4">
                 ${canPublish ? `
                     <button onclick="publishElectionResults('${electionId}')" 
