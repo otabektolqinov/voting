@@ -9,7 +9,8 @@ import com.univer.voting.exception.BadRequestException;
 import com.univer.voting.exception.ResourceNotFoundException;
 import com.univer.voting.models.Users;
 import com.univer.voting.repository.UserRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -119,16 +120,14 @@ public class UserService {
             throw new BadRequestException("Account already activated");
         }
 
-        // Activate account
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setAccountActivated(true);
         user.setEmailVerified(true);
-        user.setActivationToken(null); // Consume token
+        user.setActivationToken(null);
         user.setUpdatedAt(LocalDateTime.now());
 
         Users activatedUser = userRepository.save(user);
 
-        // Log action
         auditService.logAccountActivation(activatedUser.getId());
 
         log.info("Account activated successfully: {}", activatedUser.getUsername());
@@ -144,9 +143,6 @@ public class UserService {
         return mapToUserResponse(user);
     }
 
-    /**
-     * Verify user email
-     */
     @Transactional
     public void verifyEmail(String verificationToken) {
         UUID token = UUID.fromString(verificationToken);
@@ -204,7 +200,7 @@ public class UserService {
     }
 
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleFailedLogin(String usernameOrEmail) {
         Users user = userRepository.findByUsername(usernameOrEmail)
                 .or(() -> userRepository.findByEmail(usernameOrEmail))

@@ -41,6 +41,12 @@ public class AuthenticationService {
     @Transactional
     public AuthResponse login(LoginRequest request, String ipAddress, String userAgent) {
 
+        Users user = getUserFromLoginRequest(request.getUsernameOrEmail());
+
+        if (user != null && user.getAccountLocked()) {
+            throw new UnauthorizedException("Account locked due to multiple failed login attempts. Contact admin.");
+        }
+
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -49,7 +55,7 @@ public class AuthenticationService {
                     )
             );
 
-            Users user = getUserFromLoginRequest(request.getUsernameOrEmail());
+            user = getUserFromLoginRequest(request.getUsernameOrEmail());
 
             validateUserCanLogin(user);
 
@@ -57,7 +63,6 @@ public class AuthenticationService {
             String refreshToken = tokenProvider.generateRefreshToken(user);
 
             saveSession(user, accessToken, refreshToken, ipAddress, userAgent);
-
             userService.handleSuccessfulLogin(user.getId());
 
             log.info("User logged in successfully: {}", user.getUsername());
@@ -66,7 +71,7 @@ public class AuthenticationService {
                     .accessToken(accessToken)
                     .refreshToken(refreshToken)
                     .tokenType("Bearer")
-                    .expiresIn(jwtExpirationMs / 1000) // Convert to seconds
+                    .expiresIn(jwtExpirationMs / 1000)
                     .user(mapToUserResponse(user))
                     .build();
 
