@@ -30,7 +30,7 @@ public class UserController {
     ) {
         log.debug("Getting profile for user: {}", username);
 
-        Users user = userService.getUserByUsername(username);
+        Users user = userService.getUserById(UUID.fromString(username));
         UserResponse response = mapToUserResponse(user);
 
         return ResponseEntity.ok(response);
