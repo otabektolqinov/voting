@@ -7,6 +7,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import com.univer.voting.enums.UserRole;
 import com.univer.voting.enums.RegistrationType;
@@ -84,6 +85,9 @@ public class Users {
     @Builder.Default
     private RegistrationType registrationType = RegistrationType.SELF;
 
+    @Column(name = "locked_until")
+    private LocalDateTime lockedUntil;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -109,6 +113,7 @@ public class Users {
         this.failedLoginAttempts++;
         if (this.failedLoginAttempts >= maxAttempts) {
             this.accountLocked = true;
+            this.lockedUntil = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(60);
         }
     }
 
@@ -119,6 +124,10 @@ public class Users {
 
     public boolean needsActivation() {
         return !accountActivated && activationToken != null;
+    }
+
+    public boolean isLockExpired() {
+        return lockedUntil != null && LocalDateTime.now(ZoneOffset.UTC).isAfter(lockedUntil);
     }
 
     @Override

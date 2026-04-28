@@ -207,6 +207,13 @@ public class UserService {
                 .orElse(null);
 
         if (user != null) {
+            if (user.getAccountLocked() && user.isLockExpired()) {
+                user.setAccountLocked(false);
+                user.setLockedUntil(null);
+                user.setFailedLoginAttempts(0);
+                log.info("Account auto-unlocked for: {}", user.getUsername());
+            }
+
             user.incrementFailedLoginAttempts(maxFailedLoginAttempts);
             userRepository.save(user);
 
@@ -231,6 +238,7 @@ public class UserService {
     public void unlockAccount(UUID userId) {
         Users user = getUserById(userId);
         user.setAccountLocked(false);
+        user.setLockedUntil(null);
         user.setFailedLoginAttempts(0);
         userRepository.save(user);
 

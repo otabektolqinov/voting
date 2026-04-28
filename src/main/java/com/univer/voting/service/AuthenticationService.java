@@ -44,7 +44,7 @@ public class AuthenticationService {
         Users user = getUserFromLoginRequest(request.getUsernameOrEmail());
 
         if (user != null && user.getAccountLocked()) {
-            throw new UnauthorizedException("Account locked due to multiple failed login attempts. Contact admin.");
+            throw new UnauthorizedException("Account locked due to multiple failed login attempts. Try again in 5 minutes");
         }
 
         try {
