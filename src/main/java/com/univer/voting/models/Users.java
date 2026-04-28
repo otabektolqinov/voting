@@ -113,7 +113,7 @@ public class Users {
         this.failedLoginAttempts++;
         if (this.failedLoginAttempts >= maxAttempts) {
             this.accountLocked = true;
-            this.lockedUntil = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(60);
+            this.lockedUntil = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5);
         }
     }
 
