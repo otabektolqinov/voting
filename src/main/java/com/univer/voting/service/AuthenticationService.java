@@ -19,6 +19,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 
@@ -44,8 +46,17 @@ public class AuthenticationService {
         Users user = getUserFromLoginRequest(request.getUsernameOrEmail());
 
         if (user != null && user.getAccountLocked()) {
-            throw new UnauthorizedException("Account locked due to multiple failed login attempts. Try again in 5 minutes");
-        }
+            if (user.isLockExpired()) {
+                userService.unlockAccount(user.getId());
+            } else {
+                long minutesLeft = ChronoUnit.MINUTES.between(
+                        LocalDateTime.now(ZoneOffset.UTC),
+                        user.getLockedUntil()
+                );
+                throw new UnauthorizedException(
+                        "Account locked. Try again in " + minutesLeft + " minute(s)."
+                );
+            }        }
 
         try {
             Authentication authentication = authenticationManager.authenticate(
