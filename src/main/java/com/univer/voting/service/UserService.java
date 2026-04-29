@@ -33,6 +33,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final AuditService auditService;
+    private final ApprovedVoterService approvedVoterService;
 
     @Value("${voting.self-registration-enabled}")
     private boolean selfRegistrationEnabled;
@@ -45,6 +46,12 @@ public class UserService {
 
         if (!selfRegistrationEnabled) {
             throw new BadRequestException("Self-registration is currently disabled");
+        }
+
+        if (!approvedVoterService.isApproved(request.getNationalId(), request.getEmail())) {
+            throw new IllegalStateException(
+                    "You are not eligible to register. Your National ID is not in our approved list."
+            );
         }
 
         validateUserUniqueness(request.getUsername(), request.getEmail(), request.getNationalId());

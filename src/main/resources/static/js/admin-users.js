@@ -22,6 +22,9 @@ export async function loadUserStats() {
 
 export async function loadAllUsers() {
     const token = getAuthToken();
+
+    renderImportSections();
+
     try {
         const response = await fetch(ENDPOINTS.USERS.BASE, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -34,7 +37,7 @@ export async function loadAllUsers() {
 }
 
 function renderUsersTable(users) {
-    const container = document.getElementById('admin-users-list');
+    const container = document.getElementById('users-table-container');
 
     if (users.length === 0) {
         container.innerHTML = `
@@ -123,6 +126,161 @@ export async function toggleUserActivation(userId, currentStatus) {
     }
 }
 
+function renderImportSections() {
+    if (document.getElementById('import-sections')) return;
+
+    const container = document.getElementById('admin-users-list');
+
+    const importDiv = document.createElement('div');
+    importDiv.id = 'import-sections';
+    importDiv.className = 'p-6';
+    importDiv.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            
+            <!-- Import Users -->
+            <div class="bg-white rounded-xl shadow-md p-6 border-2 border-dashed border-indigo-200 hover:border-indigo-400 transition-colors">
+                <div class="flex items-center mb-4">
+                    <div class="bg-indigo-100 p-3 rounded-xl mr-4">
+                        <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-900">Import Users</h3>
+                        <p class="text-xs text-gray-500">Create user accounts from CSV</p>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400 mb-3">CSV format: username, email, fullName, nationalId</p>
+                <div class="flex gap-3 items-center">
+                    <input type="file" id="import-users-file" accept=".csv"
+                           class="block w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"/>
+                    <button onclick="handleImportUsers()"
+                            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold text-sm whitespace-nowrap transition-colors">
+                        Upload
+                    </button>
+                </div>
+                <p id="import-users-status" class="text-sm mt-3 hidden"></p>
+            </div>
+
+            <!-- Import Approved Voters -->
+            <div class="bg-white rounded-xl shadow-md p-6 border-2 border-dashed border-green-200 hover:border-green-400 transition-colors">
+                <div class="flex items-center mb-4">
+                    <div class="bg-green-100 p-3 rounded-xl mr-4">
+                        <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-900">Import Approved Voters</h3>
+                        <p class="text-xs text-gray-500">Add eligible voters to whitelist</p>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400 mb-3">CSV format: nationalId, email, fullName</p>
+                <div class="flex gap-3 items-center">
+                    <input type="file" id="import-approved-file" accept=".csv"
+                           class="block w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 cursor-pointer"/>
+                    <button onclick="handleImportApprovedVoters()"
+                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-sm whitespace-nowrap transition-colors">
+                        Upload
+                    </button>
+                </div>
+                <p id="import-approved-status" class="text-sm mt-3 hidden"></p>
+            </div>
+
+        </div>
+    `;
+
+    // ✅ prepend before the table
+    container.insertBefore(importDiv, container.firstChild);
+}
+
+export async function handleImportUsers() {
+    const file = document.getElementById('import-users-file').files[0];
+    const status = document.getElementById('import-users-status');
+
+    if (!file) {
+        showStatus(status, 'Please select a CSV file', 'error');
+        return;
+    }
+
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('file', file);
+
+    showStatus(status, 'Uploading...', 'loading');
+
+    try {
+        const response = await fetch(ENDPOINTS.USERS.IMPORT, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            showStatus(status, data.message || 'Import failed', 'error');
+            return;
+        }
+
+        showStatus(status, data.message || 'Users imported successfully!', 'success');
+        document.getElementById('import-users-file').value = '';
+        loadAllUsers();
+
+    } catch (error) {
+        console.error('Error importing users:', error);
+        showStatus(status, 'Network error. Please try again.', 'error');
+    }
+}
+
+export async function handleImportApprovedVoters() {
+    const file = document.getElementById('import-approved-file').files[0];
+    const status = document.getElementById('import-approved-status');
+
+    if (!file) {
+        showStatus(status, 'Please select a CSV file', 'error');
+        return;
+    }
+
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('file', file);
+
+    showStatus(status, 'Uploading...', 'loading');
+
+    try {
+        const response = await fetch(ENDPOINTS.USERS.IMPORT_APPROVED, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            showStatus(status, data.message || 'Import failed', 'error');
+            return;
+        }
+
+        showStatus(status, data.message || 'Approved voters imported successfully!', 'success');
+        document.getElementById('import-approved-file').value = '';
+
+    } catch (error) {
+        console.error('Error importing approved voters:', error);
+        showStatus(status, 'Network error. Please try again.', 'error');
+    }
+}
+
+function showStatus(element, message, type) {
+    element.classList.remove('hidden', 'text-green-600', 'text-red-600', 'text-gray-500');
+
+    if (type === 'success') element.classList.add('text-green-600');
+    else if (type === 'error') element.classList.add('text-red-600');
+    else element.classList.add('text-gray-500');
+
+    element.textContent = message;
+}
+
 export async function deleteUser(userId, fullName) {
     if (!confirm(`Are you sure you want to delete ${fullName}? This cannot be undone.`)) return;
 
@@ -144,5 +302,7 @@ export async function deleteUser(userId, fullName) {
     }
 }
 
+window.handleImportUsers = handleImportUsers;
+window.handleImportApprovedVoters = handleImportApprovedVoters;
 window.toggleUserActivation = toggleUserActivation;
 window.deleteUser = deleteUser;

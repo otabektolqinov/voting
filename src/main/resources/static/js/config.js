@@ -29,6 +29,8 @@ export const ENDPOINTS = {
     USERS: {
         BASE: `${API_URL}/users`,
         SEARCH: `${API_URL}/users/search`,
+        IMPORT: `${API_URL}/admin/users/import`,
+        IMPORT_APPROVED: `${API_URL}/admin/approved-voters/import`,
         byId: (id) => `/api/users/${id}`,
         toggleActivation: (id) => `/api/users/${id}/toggle-activation`,
         updateRole: (id) => `/api/users/${id}/role`,
