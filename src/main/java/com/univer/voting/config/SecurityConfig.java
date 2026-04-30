@@ -65,6 +65,8 @@ public class SecurityConfig {
                                 "/", "/index.html", "/js/**", "/css/**",
                                 "/api/public/**",
                                 "/activate/**",
+                                "/verify-email/**",
+                                "/activate/**",
                                 "/reset-password/**",     // Password reset
                                 "/h2-console/**",         // H2 console (testing only)
                                 "/actuator/health",       // Health check

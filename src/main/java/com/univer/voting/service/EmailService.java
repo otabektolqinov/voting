@@ -27,27 +27,27 @@ public class EmailService {
     private String appName;
 
     public void sendActivationEmail(Users user) {
-        String subject = "Activate Your Voting Account";
-        String activationLink = "http://91.99.215.33:9090/activate?token=" + user.getActivationToken();
+        String subject = "Set Your Password - Voting System";
+        String setPasswordLink = "http://91.99.215.33:9090/activate?token=" + user.getActivationToken();
 
         String body = String.format("""
-            Dear %s,
-            
-            Your voting account has been created by the system administrator.
-            
-            To complete your registration and activate your account, please click the link below:
-            %s
-            
-            This link will expire in 7 days.
-            
-            If you did not expect this email, please ignore it.
-            
-            Best regards,
-            %s Team
-            """, user.getFullName(), activationLink, appName);
+        Dear %s,
+        
+        Your voting account has been created by the system administrator.
+        
+        Please click the link below to set your password and activate your account:
+        %s
+        
+        This link will expire in 7 days.
+        
+        If you did not expect this email, please ignore it.
+        
+        Best regards,
+        %s Team
+        """, user.getFullName(), setPasswordLink, appName);
 
         sendEmail(user.getEmail(), subject, body);
-        log.info("Activation email sent to: {}", user.getEmail());
+        log.info("Set password email sent to: {}", user.getEmail());
     }
 
     public void sendEmailVerification(Users user) {

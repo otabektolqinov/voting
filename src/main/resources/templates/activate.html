@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activate Account</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center p-4">
+
+<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-2xl mb-4">
+            <svg class="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+            </svg>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-900">Secure Voting System</h1>
+    </div>
+
+    <!-- Success State -->
+    <div id="success-state" class="hidden text-center">
+        <div class="text-6xl mb-4">🎉</div>
+        <h2 class="text-2xl font-bold text-green-600 mb-2">Account Activated!</h2>
+        <p class="text-gray-500 mb-6">Your password has been set. Redirecting to login...</p>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+            <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all duration-3000" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="error-state" class="hidden text-center">
+        <div class="text-6xl mb-4">❌</div>
+        <h2 class="text-2xl font-bold text-red-600 mb-2">Invalid Link</h2>
+        <p id="error-state-message" class="text-gray-500"></p>
+    </div>
+
+    <!-- Set Password Form -->
+    <div id="form-state">
+        <h2 class="text-xl font-bold text-gray-900 mb-1">Set Your Password</h2>
+        <p class="text-gray-500 text-sm mb-6">Please set a password to activate your account.</p>
+
+        <!-- Inline error -->
+        <div id="form-error" class="hidden mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+            <p id="form-error-message" class="text-red-700 text-sm"></p>
+        </div>
+
+        <!-- Password -->
+        <div class="mb-4">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">New Password</label>
+            <input type="password" id="password" placeholder="Min 8 characters"
+                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors"/>
+        </div>
+
+        <!-- Confirm Password -->
+        <div class="mb-6">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Confirm Password</label>
+            <input type="password" id="confirmPassword" placeholder="Repeat your password"
+                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors"/>
+        </div>
+
+        <!-- Requirements -->
+        <div class="mb-6 p-3 bg-gray-50 rounded-xl">
+            <p class="text-xs text-gray-500 font-semibold mb-1">Password must:</p>
+            <ul class="text-xs text-gray-500 space-y-1">
+                <li>• Be at least 8 characters long</li>
+                <li>• Include uppercase and lowercase letters</li>
+                <li>• Include at least one number</li>
+                <li>• Include at least one special character (@$!%*?&)</li>
+            </ul>
+        </div>
+
+        <button id="submit-btn" onclick="handleActivation()"
+                class="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors">
+            Activate Account
+        </button>
+    </div>
+
+</div>
+
+<script th:inline="javascript">
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+
+    if (!token) {
+        document.getElementById('form-state').classList.add('hidden');
+        document.getElementById('error-state').classList.remove('hidden');
+        document.getElementById('error-state-message').textContent = 'No activation token found in the link.';
+    }
+
+    async function handleActivation() {
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const btn = document.getElementById('submit-btn');
+        const formError = document.getElementById('form-error');
+        const formErrorMsg = document.getElementById('form-error-message');
+
+        if (!password || !confirmPassword) {
+            showError('Please fill in all fields.');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            showError('Passwords do not match.');
+            return;
+        }
+
+        if (password.length < 8) {
+            showError('Password must be at least 8 characters.');
+            return;
+        }
+
+        btn.textContent = 'Activating...';
+        btn.disabled = true;
+        formError.classList.add('hidden');
+
+        try {
+            const response = await fetch('/api/auth/activate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    activationToken: token,
+                    password: password,
+                    confirmPassword: confirmPassword
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                showError(data.message || 'Activation failed. Please try again.');
+                btn.textContent = 'Activate Account';
+                btn.disabled = false;
+                return;
+            }
+
+            // Show success
+            document.getElementById('form-state').classList.add('hidden');
+            document.getElementById('success-state').classList.remove('hidden');
+
+            // Progress bar animation
+            setTimeout(() => {
+                document.getElementById('progress-bar').style.width = '100%';
+            }, 100);
+
+            // Redirect to login after 3 seconds
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 3000);
+
+        } catch (error) {
+            showError('Network error. Please try again.');
+            btn.textContent = 'Activate Account';
+            btn.disabled = false;
+        }
+    }
+
+    function showError(message) {
+        const formError = document.getElementById('form-error');
+        document.getElementById('form-error-message').textContent = message;
+        formError.classList.remove('hidden');
+    }
+
+    // Allow Enter key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleActivation();
+    });
+</script>
+
+</body>
+</html>
