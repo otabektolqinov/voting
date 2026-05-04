@@ -1,4 +1,4 @@
-export const API_URL = 'http://45.80.148.215:9090/api';
+export const API_URL = 'https://onlinevotingsystem.dev/api';
 
 export const ENDPOINTS = {
     AUTH: {
@@ -31,10 +31,10 @@ export const ENDPOINTS = {
         SEARCH: `${API_URL}/users/search`,
         IMPORT: `${API_URL}/admin/users/import`,
         IMPORT_APPROVED: `${API_URL}/admin/approved-voters/import`,
-        byId: (id) => `/api/users/${id}`,
-        toggleActivation: (id) => `/api/users/${id}/toggle-activation`,
-        updateRole: (id) => `/api/users/${id}/role`,
-        delete: (id) => `/api/users/${id}`,
+        byId: (id) => `${API_URL}/users/${id}`,
+        toggleActivation: (id) => `${API_URL}/users/${id}/toggle-activation`,
+        updateRole: (id) => `${API_URL}/users/${id}/role`,
+        delete: (id) => `${API_URL}/users/${id}`,
     }
 };
 
